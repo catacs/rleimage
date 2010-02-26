@@ -10,7 +10,7 @@
 			>
 			<DebugSettings
 				Command="$(TargetPath)"
-				WorkingDirectory="C:\VisualStudio2008\Projects\RLE\Data"
+				WorkingDirectory="$(ProjectDir)..\Data"
 				CommandArguments=""
 				Attach="false"
 				DebuggerType="3"

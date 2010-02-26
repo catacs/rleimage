@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cxcore.h> 
 #include <highgui.h> 
+#include <time.h>
 using namespace std;
 #define BLACK 255
 
@@ -51,23 +52,23 @@ RLEImage::~RLEImage()
 	cvReleaseImage(&info);
 
 	//hay que mantener un puntero a la sigueinte posicion
-	/*	segment *nxt=(rows[0]->first)->r_next;
+		segment *nxt=first;
 	for(segment* s=rows[0]->first;s!=NULL;s=nxt)
 	{
-	s->r_next;
-	delete s;
+		nxt=s->r_next;
+		delete s;
 	}
 
-	for(int i=0;i<rows.size();i++)
+	for(int i=0;i<(int)rows.size();i++)
 	{
-	delete rows[i];
+		delete rows[i];
 
 	}
-	for(int i=0;i<blobs.size();i++)
+	for(int i=0;i<(int)blobs.size();i++)
 	{
-	delete blobs[i];
+		delete blobs[i];
 
-	}*/
+	}
 	blobs.clear();
 	rows.clear();
 }
@@ -114,12 +115,12 @@ int RLEImage::touchedblobs(segment* s,segment **ini)
 	al llegar a un segmento que ya no toco no hay mas posibilidad de encontrar
 	un segmento que pueda tocar	
 	*/
-	for(segment* r=rows[s->row_s+1]->first;r && r->row_s==s->row_s+1;r=r->r_next)
+	for(segment* r=rows[s->row_s+1]->first;r && r->row_s==s->row_s+1 && r->column>s->column;r=r->r_next)
 	{
 
 		if(overlap(s,r))
 		{
-			cout <<endl<< s <<"  ---  "<< r <<"  "<< n;
+			//cout <<endl<< s <<"  ---  "<< r <<"  "<< n;
 			n++;
 			if(flag)
 			{
@@ -163,7 +164,7 @@ void RLEImage::fusionblobs(int b1,int b2)
 		blobs[b2]->first=NULL;
 		blobs[b2]->last=NULL;
 		blobs[b2]->size=-1;
-		cout<<endl<< "BLOB2 "<< b2 <<" en " <<"BLOB1 "<< b1<<endl;
+		//cout<<endl<< "BLOB2 "<< b2 <<" en " <<"BLOB1 "<< b1<<endl;
 	}
 
 	else
@@ -183,7 +184,7 @@ void RLEImage::fusionblobs(int b1,int b2)
 		blobs[b1]->last=NULL;
 		blobs[b1]->size=-1;
 
-		cout<<endl<< "BLOB1 "<< b1 <<" en " <<"BLOB2 "<< b2<<endl;
+		//cout<<endl<< "BLOB1 "<< b1 <<" en " <<"BLOB2 "<< b2<<endl;
 
 	}
 
@@ -219,7 +220,8 @@ void RLEImage::Createblobs()
 				//si pertenece a un blob los fusionamos con el blob del segmento actual
 				if(ini->blob!=-1)
 				{
-					if(s->blob!=ini->blob)fusionblobs(s->blob,ini->blob);
+					if(s->blob!=ini->blob)
+						fusionblobs(s->blob,ini->blob);
 				}
 				// si no pertenece a ningun blob le asignamos el blob actual
 				else if(ini->blob==-1)
@@ -231,7 +233,7 @@ void RLEImage::Createblobs()
 
 				}
 
-				//pasamos al siguiente de os segmentos que toca mi blob
+				//pasamos al siguiente de los segmentos que toca mi blob
 				ini=ini->r_next;
 
 
@@ -262,6 +264,8 @@ void RLEImage::Constructrows(IplImage *img)
 	segment *seg=NULL;
 	segment *aux_seg=NULL;
 	static const char NEGRO=0;
+	int first_on_row=0;
+	bool flag_first=true;
 
 
 	int counter=0;
@@ -270,7 +274,8 @@ void RLEImage::Constructrows(IplImage *img)
 	//constructing rows
 	for(int r=0;r<img->height;r++)
 	{
-
+		
+		first_on_row=0;
 		rows.push_back(new row(NULL,NULL));
 
 		//updating the last segment of last row that has segments
@@ -306,6 +311,7 @@ void RLEImage::Constructrows(IplImage *img)
 						aux_seg=seg;
 						num_segments++;
 						first=seg;
+					
 												
 					}
 					else
@@ -314,6 +320,7 @@ void RLEImage::Constructrows(IplImage *img)
 						aux_seg->r_next=seg;
 						aux_seg=seg;
 						num_segments++;
+						
 
 					}
 					
@@ -331,6 +338,7 @@ void RLEImage::Constructrows(IplImage *img)
 							aux_seg=seg;
 							num_segments++;
 							first=seg;
+							first_on_row++;
 						}
 						else
 						{
@@ -338,6 +346,14 @@ void RLEImage::Constructrows(IplImage *img)
 							aux_seg->r_next=seg;
 							aux_seg=seg;
 							num_segments++;
+							
+						}
+
+						if(!rows[rows.size()-1]->first)
+						{
+							
+							rows[rows.size()-1]->first=aux_seg;
+							rows[rows.size()-1]->last=aux_seg;
 						}
 					}
 					else
@@ -397,17 +413,41 @@ IplImage* RLEImage::Descompress()
 	ofstream dat("orig.html");
 	int count=0;
 
-	cout <<endl;
+	//cout <<endl;
 
-	for(int i=0;i<img->height;i++)
+/*	for(int i=0;i<img->height;i++)
 	{
 		for(int j=0;j<img->width;j++)
 		{
 			((uchar*)(img->imageData + img->widthStep*i))[j]=255;
-			cout<<(int)((uchar*)(img->imageData + img->widthStep*i))[j]<<" ";
+			//cout<<(int)((uchar*)(img->imageData + img->widthStep*i))[j]<<" ";
 		}
-		cout <<endl;
+		//cout <<endl;
 	}
+*/
+	/*for (int i=0;i<(int)blobs.size();i++)
+
+		for (segment *s=blobs[i]->first;s;s=s->b_next)
+	{
+		for(int pos=s->first;pos<s->last+1;pos++)
+		{
+
+			((uchar*)(img->imageData + img->widthStep*(pos/(img->width))))[pos%(img->width)]=NEGRO;
+			dat << pos<<":"<<(int)((uchar*)(img->imageData + img->widthStep*(pos/(img->width))))[pos%(img->width)]<<endl;
+		
+			//cout << i<< "    "<< blobs[i]->size<<endl ;
+		}
+
+
+
+
+
+	}*/
+
+	clock_t t1,t2;
+
+	t1=clock();
+
 
 	while(seg!=NULL)
 	{
@@ -415,18 +455,23 @@ IplImage* RLEImage::Descompress()
 		{
 
 			((uchar*)(img->imageData + img->widthStep*(pos/(img->width))))[pos%(img->width)]=NEGRO;
-			dat << pos<<":"<<(int)((uchar*)(img->imageData + img->widthStep*(pos/(img->width))))[pos%(img->width)]<<endl;
+			//dat << pos<<":"<<(int)((uchar*)(img->imageData + img->widthStep*(pos/(img->width))))[pos%(img->width)]<<endl;
 		}
 
 		seg=seg->r_next;
 
 	}
+
+	t2=clock();
+
+	cout << "----Descompresion bucle: "<<(double)(t2-t1)/CLOCKS_PER_SEC<<endl;
+	/*
 	for(int i=0;i<img->height;i++)
 	{
 		for(int j=0;j<img->width;j++)
 			cout<<(int)((uchar*)(img->imageData + img->widthStep*i))[j]<<" ";
 		cout <<endl;
-	}
+	}*/
 
 	dat.close();
 	return img;
