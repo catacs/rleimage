@@ -2,6 +2,7 @@
 #define RLE_H
 #include <cv.h>
 #include <vector>
+#include <map>
 using namespace std;
 
 
@@ -58,6 +59,19 @@ class blob
 		blob(segment *first,segment *last);
 };
 
+class pos
+{
+public:
+	int ini;
+	int fin;
+	pos* nxt;
+
+	pos(int a,int b)
+	{
+		ini=a;fin=b;
+	}
+};
+
 
 class RLEImage
 {	
@@ -67,6 +81,10 @@ class RLEImage
 	segment *last;
 	int num_segments;
 	int num_blobs;
+
+	//Este vector se usa para almacenar los solapamientos a la hora de 
+	//realizar la Erosion 
+	map<segment *,pos*>  ovlp;
 
 	
 
@@ -80,6 +98,12 @@ class RLEImage
 	void Createblobs();
 	int touchedblobs(segment* s,segment **ini);
 	void fusionblobs(int b1,int b2);
+
+
+
+	bool DeleteSegmentsOnRow(int r);
+	void CalculateOverlapedSegments(int ant,int act);
+	void ProcessErosion(int i);
 public:
 
 
