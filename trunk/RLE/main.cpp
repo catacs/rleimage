@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	RLEImage *myrle=new RLEImage(img);
 	t2 = clock();
 
-
+	//myrle->Erosion(0,0);
 
 	cout<<"Comprimir:"<<endl;
 	cout <<"--TIME:  "<<((double)( t2 - t1)) / CLOCKS_PER_SEC<<endl;

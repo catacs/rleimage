@@ -4,6 +4,7 @@
 #include <cxcore.h> 
 #include <highgui.h> 
 #include <time.h>
+#include <map>
 using namespace std;
 #define BLACK 255
 
@@ -415,7 +416,7 @@ IplImage* RLEImage::Descompress()
 
 	//cout <<endl;
 
-/*	for(int i=0;i<img->height;i++)
+	for(int i=0;i<img->height;i++)
 	{
 		for(int j=0;j<img->width;j++)
 		{
@@ -424,7 +425,7 @@ IplImage* RLEImage::Descompress()
 		}
 		//cout <<endl;
 	}
-*/
+
 	/*for (int i=0;i<(int)blobs.size();i++)
 
 		for (segment *s=blobs[i]->first;s;s=s->b_next)
@@ -477,11 +478,203 @@ IplImage* RLEImage::Descompress()
 	return img;
 }
 
+bool RLEImage::DeleteSegmentsOnRow(int r)
+{
+
+	if(r==0)
+	{
+		//Delete ALL
+
+		
+	}
+	else if(r==rows.size())
+	{
+		//delete ALL
+	
+	
+	}
+	else
+	{
+		pos *mypos;
+
+		for(segment *s=rows[r]->first;s && s->column==rows[r]->first->column;s=s->r_next)
+		{
+			s->column+=1;
+			s->length-=1;
+			s->first+=1;
+			s->last-=1;
+			
+
+			mypos=ovlp[s];
+			int mod=0;
+			while(mypos)
+			{
+				if(mod==1)
+				{
+					s->column=max(s->column,mypos->ini);
+					s->length=min(s->length,mypos->fin-mypos->ini+1);
+				}
+				else
+				{
+					segment *actual=s->r_next;
+					s->r_next=new segment(s->row_s,mypos->ini,mypos->fin-mypos->ini,
+						s->row_s+mypos->ini,s->row_s+mypos->fin,actual->blob,NULL,
+						actual->r_next);
+					s=s->r_next;
+				}
+
+				mypos=mypos->nxt;
+
+			}
+
+
+
+
+		}
+
+		
+
+		//delete the selected pixels
+	}
+
+
+
+	return true;
+	
+}
+
+
+void RLEImage::CalculateOverlapedSegments(int ant,int post)
+{
+	
+	bool flag=true;
+	segment *ini=NULL;//first segments it touch
+	int n=0;//number of touched segemnts;
+
+	for(segment* r=rows[post]->first;r && r->column==rows[post]->first->column;r=r->r_next)
+	{
+		flag=false;
+		n=0;
+		ini=NULL;
+		pos *size;
+
+		for(segment* s=rows[ant]->first;s && s->row_s==s->row_s+1 && 
+			r->column+r->length-1>s->column;s=s->r_next)
+		{
+			size->ini=s->column;
+			size->fin=s->column+s->length-1;
+
+			if(overlap(r,s))
+			{
+				//cout <<endl<< s <<"  ---  "<< r <<"  "<< n;
+				n++;
+				if(flag)
+				{
+					flag=false;
+					ini=s;
+				}
+			}
+
+
+		}
+	//Calculamos interseccion entre las 2 filas anterior y posterior
+		if(n>0)
+		{
+			pos *mypos=NULL;
+			for(int i=0;i<n;n++)
+			{
+				
+				if(i==1)
+				{
+					mypos=new pos(max(r->column,ini->column),min(r->column+r->length-1,ini->column+ini->length-1));
+					ovlp[r]=mypos;
+					mypos->nxt=NULL;
+				}
+				else
+				{
+					mypos=new pos(max(r->column,ini->column),min(r->column+r->length-1,ini->column+ini->length-1));
+					ovlp.find(r)->second->nxt=mypos;
+					mypos->nxt=NULL;
+				}
+
+
+
+				ini=ini->r_next;
+			}
+
+
+		}
+
+	}
+}
+
+
+void RLEImage::ProcessErosion(int i)
+{
+	int upsegments=0;
+	int downsegments=0;
+	if(i==1)
+	{		
+		CalculateOverlapedSegments(i-1,i+1);
+
+		//CalculateOverlapedSegments(i,i+1);
+	}
+	if(i>=2)
+	{
+		DeleteSegmentsOnRow(i-2);
+
+		CalculateOverlapedSegments(i-1,i+1);
+
+		//CalculateOverlapedSegments(i+1,i);
+
+		
+	}
+
+
+
+
+}
 void RLEImage::Erosion(char color, char background)
 {
 
+	segment *pred=first;
+	
+
+	//Si la imgen solo tiene 2 filas
+	// la erosion lo borra todo
+	if(first && (int)rows.size()<3)
+	{
+
+		segment *nxt=first;
+		//borramos todos los segmentos
+		for(segment* s=first;s!=NULL;s=nxt)
+		{
+			nxt=s->r_next;
+			delete s;
+		}
+		//ponemos todas las finalas a NULL para asegurarnos
+		for(int i=0;i<rows.size();i++)
+		{
+			rows[i]->first=NULL;
+			rows[i]->last=NULL;
+		}
+		//ponemos el primer segmento a NULL tambien por seguridad
+		first=NULL;
 
 
+
+	}
+	else
+	{
+		//Por Filas
+		for(int i=0;i<rows.size();i++)
+		{
+				ProcessErosion(i);
+
+		}
+
+
+	}
 
 }
 void RLEImage::Dilatation(char color,char background)
